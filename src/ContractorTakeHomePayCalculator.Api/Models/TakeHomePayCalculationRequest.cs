@@ -4,6 +4,7 @@
         decimal DayRate,
         int DaysWorked,
         decimal MonthlyFee,
-        decimal SalarySacrificePension
+        decimal SalarySacrificePension,
+        string TaxCode
     );
 }

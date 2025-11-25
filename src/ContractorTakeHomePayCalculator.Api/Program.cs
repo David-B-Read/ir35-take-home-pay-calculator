@@ -19,7 +19,8 @@ app.MapPost("/api/payslip",
             request.DayRate,
             request.DaysWorked,
             request.MonthlyFee,
-            request.SalarySacrificePension
+            request.SalarySacrificePension,
+            request.TaxCode
         );
 
         return Results.Ok(breakdown);

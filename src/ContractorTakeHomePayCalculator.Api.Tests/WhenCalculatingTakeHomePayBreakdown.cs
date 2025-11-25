@@ -10,6 +10,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         private int _daysWorked;
         private decimal _monthlyFee;
         private decimal _salarySacrificePension;
+        private string _taxCode;
 
         [SetUp]
         public void Setup()
@@ -20,12 +21,13 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
             _daysWorked = 20;
             _monthlyFee = 100;
             _salarySacrificePension = 0;
+            _taxCode = "1257L";
         }
 
         [Test]
         public void Then_the_assignment_rate_will_be_calculated_based_on_day_rate_and_days_worked()
         {
-            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             Assert.That(breakdown.AssignmentRate.Equals(_daysWorked * _dayRate));
         }
@@ -33,7 +35,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         [Test]
         public void Then_the_apprenticeship_levy_will_be_calculated_excluding_the_monthly_fee()
         {
-            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             var expectedApprenticeshipLevy = ((_daysWorked * _dayRate) - _monthlyFee) * 0.005m;
             Assert.That(breakdown.ApprenticeshipLevy.Equals(expectedApprenticeshipLevy));
@@ -42,7 +44,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         [Test]
         public void Then_the_employer_NI_contribution_will_be_calculated_using_the_NI_threshold_and_tax_rate()
         {
-            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             var expectedEmployersNationalInsurance = (((_daysWorked * _dayRate) - _monthlyFee) - (9100m/12)) * 0.15m;
             Assert.That(breakdown.EmployerNI.Equals(expectedEmployersNationalInsurance));
@@ -53,14 +55,14 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         {
             var dayRateBelowThreshold = ((9100m / 12) - 1 ) / _daysWorked;
 
-            var breakdown = _sut.CalculateBreakdown(dayRateBelowThreshold, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(dayRateBelowThreshold, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
             Assert.That(breakdown.EmployerNI.Equals(0));
         }
 
         [Test]
         public void Then_the_total_employer_costs_will_include_employer_NI_and_the_apprenticeship_levy()
         {
-            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             var expectedEmployerCosts = breakdown.EmployerNI + breakdown.ApprenticeshipLevy;
             Assert.That(breakdown.TotalEmployerCosts.Equals(expectedEmployerCosts));
@@ -71,7 +73,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         {
             var salarySacrificePensionValue = 500m;
 
-            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, salarySacrificePensionValue);
+            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, salarySacrificePensionValue, _taxCode);
 
             var expectedTaxablePay = breakdown.AfterMonthlyFee - breakdown.TotalEmployerCosts - salarySacrificePensionValue;
             Assert.That(breakdown.SalarySacrificePension.Equals(salarySacrificePensionValue));
@@ -83,7 +85,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         {
             var dayRateUnderPersonalAllowance = ((12570m / 12) / _daysWorked) - 1;
 
-            var breakdown = _sut.CalculateBreakdown(dayRateUnderPersonalAllowance, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(dayRateUnderPersonalAllowance, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             Assert.That(breakdown.IncomeTax.Equals(0));
         }
@@ -93,7 +95,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         {
             var dayRateWithinBasicTaxRate = ((12570m / 12) / _daysWorked) + 10;
 
-            var breakdown = _sut.CalculateBreakdown(dayRateWithinBasicTaxRate, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(dayRateWithinBasicTaxRate, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             var expectedBasicRateTax = (breakdown.TaxablePay - (12570m / 12) ) * 0.20m;
             Assert.That(breakdown.IncomeTax.Equals(expectedBasicRateTax));
@@ -104,7 +106,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         {
             var dayRateAboveHigherTaxRate = ((50270m / 12) / _daysWorked) + 50;
 
-            var breakdown = _sut.CalculateBreakdown(dayRateAboveHigherTaxRate, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(dayRateAboveHigherTaxRate, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             var expectedBasicRateTax = ((50270m / 12) - (12570m / 12)) * 0.20m;
             var expectedHigherRateTax = (breakdown.TaxablePay - (50270m / 12)) * 0.40m;
@@ -117,7 +119,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         {
             var dayRateWithinBasicTaxRate = ((125140m / 12) / _daysWorked) + 100;
 
-            var breakdown = _sut.CalculateBreakdown(dayRateWithinBasicTaxRate, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(dayRateWithinBasicTaxRate, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             var expectedBasicRateTax = (50270m / 12) * 0.20m;
             var expectedAdditionalRateTax = (breakdown.TaxablePay - (125140m / 12)) * 0.45m;
@@ -133,7 +135,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         {
             var dayRateUnderNationalInsuranceThreshold = ((12568m / 12) / _daysWorked) - 1;
 
-            var breakdown = _sut.CalculateBreakdown(dayRateUnderNationalInsuranceThreshold, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(dayRateUnderNationalInsuranceThreshold, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             Assert.That(breakdown.EmployeeNI.Equals(0));
         }
@@ -143,7 +145,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         {
             var dayRateAboveNationalInsurancePrimaryThreshold = ((12568m / 12) / _daysWorked) + 10;
 
-            var breakdown = _sut.CalculateBreakdown(dayRateAboveNationalInsurancePrimaryThreshold, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(dayRateAboveNationalInsurancePrimaryThreshold, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             var expectedEmployeeNationalInsurance = (breakdown.TaxablePay - (12568m / 12)) * 0.08m;
             Assert.That(breakdown.EmployeeNI.Equals(expectedEmployeeNationalInsurance));
@@ -154,7 +156,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         {
             var dayRateAboveNationalInsuranceSecondaryThreshold = ((50270m / 12) / _daysWorked) + 50;
 
-            var breakdown = _sut.CalculateBreakdown(dayRateAboveNationalInsuranceSecondaryThreshold, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(dayRateAboveNationalInsuranceSecondaryThreshold, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             var taxablePayApplicableToPrimaryRate = (50270m - 12568m) / 12;
             var taxablePayApplicableToUpperRate = breakdown.TaxablePay - taxablePayApplicableToPrimaryRate - (12568m / 12);
@@ -165,7 +167,7 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         [Test]
         public void Then_the_take_home_pay_will_be_the_taxable_pay_after_deductions()
         {
-            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, _salarySacrificePension);
+            var breakdown = _sut.CalculateBreakdown(_dayRate, _daysWorked, _monthlyFee, _salarySacrificePension, _taxCode);
 
             var expectedTakeHomePay = breakdown.TaxablePay - breakdown.EmployeeNI - breakdown.IncomeTax;
             Assert.That(breakdown.NetTakeHomePay.Equals(expectedTakeHomePay));

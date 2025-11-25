@@ -4,7 +4,6 @@ namespace ContractorTakeHomePayCalculator.Api.Services
 {
     public class TakeHomePayCalculatorService
     {
-        private const decimal PersonalAllowance = 12570m;
         private const decimal BasicRateLimit = 50270m;
         private const decimal HigherRateLimit = 125140m;
 
@@ -26,8 +25,11 @@ namespace ContractorTakeHomePayCalculator.Api.Services
             decimal dayRate,
             int daysWorked,
             decimal monthlyFee,
-            decimal salarySacrificePension)
+            decimal salarySacrificePension,
+            string taxCode)
         {
+            var taxFreeAllowance = CalculateTaxFreeAllowance(taxCode);
+
             var breakdown = new TakeHomePayCalculationBreakdown
             {
                 AssignmentRate = dayRate * daysWorked,
@@ -48,12 +50,17 @@ namespace ContractorTakeHomePayCalculator.Api.Services
             breakdown.SalarySacrificePension = salarySacrificePension;
             breakdown.TaxablePay = Math.Max(0, breakdown.EmploymentCostBase - salarySacrificePension);
 
-            breakdown.IncomeTax = CalculateIncomeTax(breakdown.TaxablePay);
+            breakdown.IncomeTax = CalculateIncomeTax(breakdown.TaxablePay, taxFreeAllowance);
             breakdown.EmployeeNI = CalculateEmployeeNI(breakdown.TaxablePay);
 
             breakdown.NetTakeHomePay = breakdown.TaxablePay - breakdown.IncomeTax - breakdown.EmployeeNI;
 
             return breakdown;
+        }
+
+        private decimal CalculateTaxFreeAllowance(string taxCode)
+        {
+            return new TaxCodeCalculatorService().CalculateTaxFreeAllowance(taxCode);
         }
 
         private decimal CalculateEmployerNI(decimal pay)
@@ -64,14 +71,14 @@ namespace ContractorTakeHomePayCalculator.Api.Services
             return (pay - monthlyNIThreshold) * EmployerNIRate;
         }
 
-        private decimal CalculateIncomeTax(decimal taxablePay)
+        private decimal CalculateIncomeTax(decimal taxablePay, decimal taxFreeAllowance)
         {
             decimal tax = 0;
             decimal remaining = taxablePay;
 
-            decimal adjustedPA = PersonalAllowance / 12;
+            decimal adjustedPA = taxFreeAllowance / 12;
             if (taxablePay > (100000 / 12))
-                adjustedPA = Math.Max(0, (PersonalAllowance/12) - (taxablePay - (100000 / 12)) / 2);
+                adjustedPA = Math.Max(0, (taxFreeAllowance / 12) - (taxablePay - (100000 / 12)) / 2);
 
             remaining -= adjustedPA;
             if (remaining <= 0) return 0;
