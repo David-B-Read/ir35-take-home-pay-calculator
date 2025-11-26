@@ -1,4 +1,5 @@
-﻿using ContractorTakeHomePayCalculator.Api.Services;
+﻿using ContractorTakeHomePayCalculator.Api.Configuration;
+using ContractorTakeHomePayCalculator.Api.Services;
 
 namespace ContractorTakeHomePayCalculator.Api.Tests
 {
@@ -6,11 +7,17 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
     public class WhenCalculatingTaxFreeAllowance
     {
         private TaxCodeCalculatorService _sut;
+        private TakeHomePayCalculatorConfiguration _configuration;
 
         [SetUp]
         public void Setup()
         {
-            _sut = new TaxCodeCalculatorService();
+            _configuration = new TakeHomePayCalculatorConfiguration
+            {
+                PersonalAllowance = 12570m
+            };
+
+            _sut = new TaxCodeCalculatorService(_configuration);
         }
 
         [TestCase("3000Z", 12570)]

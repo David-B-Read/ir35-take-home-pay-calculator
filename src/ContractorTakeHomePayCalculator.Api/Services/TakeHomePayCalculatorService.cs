@@ -1,25 +1,17 @@
-﻿using ContractorTakeHomePayCalculator.Api.Models;
+﻿using ContractorTakeHomePayCalculator.Api.Configuration;
+using ContractorTakeHomePayCalculator.Api.Models;
+using Microsoft.Extensions.Options;
 
 namespace ContractorTakeHomePayCalculator.Api.Services
 {
     public class TakeHomePayCalculatorService
     {
-        private const decimal BasicRateLimit = 50270m;
-        private const decimal HigherRateLimit = 125140m;
+        private readonly TakeHomePayCalculatorConfiguration _configuration; 
 
-        private const decimal BasicRateTax = 0.20m;
-        private const decimal HigherRateTax = 0.40m;
-        private const decimal AdditionalRateTax = 0.45m;
-
-        private const decimal NIPrimaryThreshold = 12568m;
-        private const decimal NIUpperEarningsLimit = 50270m;
-        private const decimal NIStandardRate = 0.08m;
-        private const decimal NIUpperRate = 0.02m;
-
-        private const decimal EmployerNIThreshold = 9100m;
-        private const decimal EmployerNIRate = 0.15m;
-
-        private const decimal ApprenticeshipLevyRate = 0.005m;
+        public TakeHomePayCalculatorService(IOptions<TakeHomePayCalculatorConfiguration> configuration)
+        {
+            _configuration = configuration.Value;
+        }
 
         public TakeHomePayCalculationBreakdown CalculateBreakdown(
             decimal dayRate,
@@ -38,7 +30,7 @@ namespace ContractorTakeHomePayCalculator.Api.Services
             breakdown.AfterMonthlyFee = breakdown.AssignmentRate - monthlyFee;
 
             breakdown.EmployerNI = CalculateEmployerNI(breakdown.AfterMonthlyFee);
-            breakdown.ApprenticeshipLevy = breakdown.AfterMonthlyFee * ApprenticeshipLevyRate;
+            breakdown.ApprenticeshipLevy = breakdown.AfterMonthlyFee * _configuration.ApprenticeshipLevyRate;
             breakdown.TotalEmployerCosts = breakdown.EmployerNI + breakdown.ApprenticeshipLevy;
 
             breakdown.EmploymentCostBase = breakdown.AfterMonthlyFee - breakdown.TotalEmployerCosts;
@@ -60,15 +52,15 @@ namespace ContractorTakeHomePayCalculator.Api.Services
 
         private decimal CalculateTaxFreeAllowance(string taxCode)
         {
-            return new TaxCodeCalculatorService().CalculateTaxFreeAllowance(taxCode);
+            return new TaxCodeCalculatorService(_configuration).CalculateTaxFreeAllowance(taxCode);
         }
 
         private decimal CalculateEmployerNI(decimal pay)
         {
-            var monthlyNIThreshold = EmployerNIThreshold / 12;
+            var monthlyNIThreshold = _configuration.EmployerNIThreshold / 12;
 
             if (pay <= monthlyNIThreshold) return 0;
-            return (pay - monthlyNIThreshold) * EmployerNIRate;
+            return (pay - monthlyNIThreshold) * _configuration.EmployerNIRate;
         }
 
         private decimal CalculateIncomeTax(decimal taxablePay, decimal taxFreeAllowance)
@@ -83,25 +75,25 @@ namespace ContractorTakeHomePayCalculator.Api.Services
             remaining -= adjustedPA;
             if (remaining <= 0) return 0;
 
-            decimal basicBand = Math.Min(remaining, (BasicRateLimit / 12) - adjustedPA);
-            tax += basicBand * BasicRateTax;
+            decimal basicBand = Math.Min(remaining, (_configuration.BasicRateLimit / 12) - adjustedPA);
+            tax += basicBand * _configuration.BasicRateTax;
             remaining -= basicBand;
             if (remaining <= 0) return tax;
 
-            decimal higherBand = Math.Min(remaining, (HigherRateLimit - BasicRateLimit) / 12);
-            tax += higherBand * HigherRateTax;
+            decimal higherBand = Math.Min(remaining, (_configuration.HigherRateLimit - _configuration.BasicRateLimit) / 12);
+            tax += higherBand * _configuration.HigherRateTax;
             remaining -= higherBand;
             if (remaining <= 0) return tax;
 
-            tax += remaining * AdditionalRateTax;
+            tax += remaining * _configuration.AdditionalRateTax;
 
             return tax;
         }
 
         private decimal CalculateEmployeeNI(decimal taxablePay)
         {
-            var monthlyNIPrimaryThreshold = NIPrimaryThreshold / 12;
-            var monthlyNIUpperEarningsLimit = NIUpperEarningsLimit / 12; 
+            var monthlyNIPrimaryThreshold = _configuration.NIPrimaryThreshold / 12;
+            var monthlyNIUpperEarningsLimit = _configuration.NIUpperEarningsLimit / 12; 
 
             if (taxablePay <= monthlyNIPrimaryThreshold)
                 return 0;
@@ -110,12 +102,12 @@ namespace ContractorTakeHomePayCalculator.Api.Services
 
             decimal lowerBand = Math.Min(taxablePay, monthlyNIUpperEarningsLimit) - monthlyNIPrimaryThreshold;
             if (lowerBand > 0)
-                ni += lowerBand * NIStandardRate;
+                ni += lowerBand * _configuration.NIStandardRate;
 
             if (taxablePay > monthlyNIUpperEarningsLimit)
             {
                 decimal upperBand = taxablePay - monthlyNIUpperEarningsLimit;
-                ni += upperBand * NIUpperRate;
+                ni += upperBand * _configuration.NIUpperRate;
             }
 
             return ni;

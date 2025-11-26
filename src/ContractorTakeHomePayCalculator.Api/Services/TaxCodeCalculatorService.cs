@@ -1,14 +1,21 @@
-﻿namespace ContractorTakeHomePayCalculator.Api.Services
+﻿using ContractorTakeHomePayCalculator.Api.Configuration;
+
+namespace ContractorTakeHomePayCalculator.Api.Services
 {
     public class TaxCodeCalculatorService
     {
-        private const decimal DefaultPersonalAllowance = 12570m;
+        private readonly TakeHomePayCalculatorConfiguration _configuration;
+
+        public TaxCodeCalculatorService(TakeHomePayCalculatorConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
 
         public decimal CalculateTaxFreeAllowance(string taxCode)
         {
             if (String.IsNullOrWhiteSpace(taxCode))
             {
-                return DefaultPersonalAllowance;
+                return _configuration.PersonalAllowance;
             }
 
             if (taxCode.ToUpper().EndsWith("K"))
@@ -21,7 +28,7 @@
                 return 10 * ParseTaxNumericPortionOfTaxCode(taxCode);
             }
 
-            return DefaultPersonalAllowance;
+            return _configuration.PersonalAllowance;
         }
 
         private decimal ParseTaxNumericPortionOfTaxCode(string taxCode)
@@ -30,7 +37,7 @@
             var parsed = decimal.TryParse(numericValue, out var convertedValue);
             if (!parsed)
             {
-                return DefaultPersonalAllowance;
+                return _configuration.PersonalAllowance;
             }
 
             return convertedValue;

@@ -1,7 +1,12 @@
+using ContractorTakeHomePayCalculator.Api.Configuration;
 using ContractorTakeHomePayCalculator.Api.Models;
 using ContractorTakeHomePayCalculator.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.Configure<TakeHomePayCalculatorConfiguration>(
+    builder.Configuration.GetSection("TaxCalculationConfig")
+);
 
 builder.Services.AddSingleton<TakeHomePayCalculatorService>();
 builder.Services.AddEndpointsApiExplorer();

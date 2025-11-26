@@ -1,4 +1,6 @@
+using ContractorTakeHomePayCalculator.Api.Configuration;
 using ContractorTakeHomePayCalculator.Api.Services;
+using Microsoft.Extensions.Options;
 
 namespace ContractorTakeHomePayCalculator.Api.Tests
 {
@@ -11,11 +13,30 @@ namespace ContractorTakeHomePayCalculator.Api.Tests
         private decimal _monthlyFee;
         private decimal _salarySacrificePension;
         private string _taxCode;
-
+        private TakeHomePayCalculatorConfiguration _configuration;
+        
         [SetUp]
         public void Setup()
         {
-            _sut = new TakeHomePayCalculatorService();
+            _configuration = new TakeHomePayCalculatorConfiguration
+            {
+                PersonalAllowance = 12570m,
+                BasicRateLimit = 50270m,
+                HigherRateLimit = 125140m,
+                BasicRateTax = 0.20m,
+                HigherRateTax = 0.40m,
+                AdditionalRateTax = 0.45m,
+                NIPrimaryThreshold = 12568m,
+                NIUpperEarningsLimit = 50270m,
+                NIStandardRate = 0.08m,
+                NIUpperRate = 0.02m,
+                EmployerNIThreshold = 9100m,
+                EmployerNIRate = 0.15m,
+                ApprenticeshipLevyRate = 0.005m
+            };
+            var configurationOptions = Options.Create(_configuration);
+
+            _sut = new TakeHomePayCalculatorService(configurationOptions);
 
             _dayRate = 300;
             _daysWorked = 20;
